@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance City</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#87CEEB;min-height:100vh;font-family:'Press Start 2P',monospace;image-rendering:pixelated;user-select:none;-webkit-user-select:none;touch-action:manipulation;color:#3A2818}
+body::before{content:'';position:fixed;inset:0;background:linear-gradient(180deg,#87CEEB 0%,#B0E0FF 100%);z-index:0}
+.shell{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:10px 10px 24px}
+.hdr{text-align:center;padding:12px 0 8px}
+.hdr-title{font-size:clamp(13px,3.6vw,20px);color:#fff;text-shadow:3px 3px 0 #2E7D32;letter-spacing:.05em}
+.hdr-sub{font-size:6.5px;color:#fff;text-shadow:2px 2px 0 #2E7D32;margin-top:5px;letter-spacing:.08em}
+
+/* STATS BAR (top) */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.stat{background:#FFFDE7;border:3px solid #5A3E28;padding:7px 4px;text-align:center;box-shadow:3px 3px 0 #3A2818}
+.stat-label{font-size:6px;color:#5A3E28;margin-bottom:3px;letter-spacing:.05em}
+.stat-val{font-size:clamp(8px,1.8vw,11px);font-weight:700}
+.stat.cash .stat-val{color:#2E7D32}
+.stat.savings .stat-val{color:#1565C0}
+.stat.debt .stat-val{color:#C62828}
+.stat.day .stat-val{color:#6A1B9A}
+.stat.debt-warn{animation:warn 1s step-end infinite}
+@keyframes warn{0%,100%{background:#FFFDE7}50%{background:#FFCDD2}}
+
+/* GOAL BAR */
+.goal-bar{background:#E8F5E9;border:3px solid #5A3E28;padding:6px 10px;margin-bottom:8px;box-shadow:3px 3px 0 #3A2818;display:flex;align-items:center;gap:10px}
+.goal-label{font-size:7px;color:#5A3E28;white-space:nowrap}
+.goal-track{flex:1;background:#fff;border:2px solid #5A3E28;height:10px;position:relative;overflow:hidden}
+.goal-fill{background:#4CAF50;height:100%;transition:width .3s ease}
+.goal-pct{font-size:7px;color:#2E7D32;white-space:nowrap}
+
+/* WORLD VIEW */
+.world-wrap{width:100%;aspect-ratio:20/13;border:4px solid #5A3E28;background:#222;margin-bottom:8px;position:relative;box-shadow:4px 4px 0 #3A2818;overflow:hidden}
+#gc{width:100%;height:100%;display:block;image-rendering:pixelated}
+.world-label{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.7);color:#FFD700;font-size:6.5px;padding:4px 7px;border:2px solid #FFD700;z-index:3}
+.coord-badge{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);color:#4FC3F7;font-size:6px;padding:3px 6px;border:2px solid #4FC3F7;z-index:3}
+.world-wrap.flash::after{content:'';position:absolute;inset:0;background:#fff;opacity:.7;z-index:4;pointer-events:none;animation:flashA .3s ease-out}
+@keyframes flashA{from{opacity:.7}to{opacity:0}}
+
+/* TEXT BOX */
+.textbox{background:#FFFDE7;border:4px solid #5A3E28;padding:10px 12px;margin-bottom:8px;box-shadow:4px 4px 0 #3A2818;min-height:48px;position:relative}
+.tb-title{font-size:7px;color:#BF360C;margin-bottom:6px;letter-spacing:.1em}
+.tb-text{font-size:clamp(7px,1.7vw,9px);color:#3A2818;line-height:1.9}
+.textbox.loading::before{content:'⏳ ';color:#999}
+
+/* MENU CHOICES */
+.menu-choices{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+@media(max-width:460px){.menu-choices{grid-template-columns:1fr}}
+.menu-btn{background:#4CAF50;border:3px solid #2E7D32;color:#fff;font-family:'Press Start 2P',monospace;font-size:clamp(6px,1.4vw,7.5px);line-height:1.7;padding:10px 10px;text-align:left;cursor:pointer;box-shadow:3px 3px 0 #1B5E20;transition:transform .1s;-webkit-tap-highlight-color:transparent}
+.menu-btn:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:4px 4px 0 #1B5E20;background:#66BB6A}
+.menu-btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 #1B5E20}
+.menu-btn:disabled{opacity:.35;cursor:not-allowed;background:#9E9E9E;border-color:#616161;box-shadow:3px 3px 0 #424242}
+.menu-btn.warn{background:#FF9800;border-color:#E65100;box-shadow:3px 3px 0 #BF360C}
+.menu-btn.warn:hover:not(:disabled){background:#FFA726}
+.menu-btn.danger{background:#C62828;border-color:#8B0000;box-shadow:3px 3px 0 #7F0000}
+.menu-btn.danger:hover:not(:disabled){background:#E53935}
+.menu-btn.special{background:#1976D2;border-color:#0D47A1;box-shadow:3px 3px 0 #0B3B85}
+.menu-btn.special:hover:not(:disabled){background:#2196F3}
+.menu-btn-label{font-size:5.5px;display:block;margin-bottom:3px;opacity:.85}
+
+/* DPAD */
+.bottom{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:4px}
+@media(max-width:520px){.bottom{grid-template-columns:1fr}.dpad-wrap{justify-self:center}}
+.hint-box{background:#E3F2FD;border:3px solid #5A3E28;padding:8px 10px;box-shadow:3px 3px 0 #3A2818;font-size:6.5px;color:#5A3E28;line-height:1.8}
+.dpad-wrap{display:flex;gap:6px;align-items:center}
+.dpad{display:grid;grid-template-columns:repeat(3,30px);grid-template-rows:repeat(3,30px);gap:3px}
+.dbtn{background:#4CAF50;border:2px solid #2E7D32;color:#fff;font-family:'Press Start 2P',monospace;font-size:13px;cursor:pointer;box-shadow:2px 2px 0 #1B5E20;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}
+.dbtn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 #1B5E20;background:#66BB6A}
+.dbtn.empty{visibility:hidden;pointer-events:none}
+.abtn{background:#FF9800;border:3px solid #E65100;color:#fff;font-family:'Press Start 2P',monospace;font-size:9px;padding:11px 14px;cursor:pointer;box-shadow:3px 3px 0 #BF360C;min-width:50px;min-height:50px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.abtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #BF360C}
+
+/* INTRO */
+.intro{text-align:center;padding:8px 0 16px}
+.intro-desc{font-size:8px;color:#fff;text-shadow:2px 2px 0 #2E7D32;line-height:2;margin-bottom:14px}
+.goal-card{background:rgba(255,253,231,.95);border:3px solid #5A3E28;padding:14px 16px;margin:0 auto 14px;max-width:480px;box-shadow:3px 3px 0 #3A2818;text-align:left}
+.goal-title{font-size:9px;color:#BF360C;margin-bottom:10px;text-align:center;letter-spacing:.1em}
+.goal-text{font-size:7px;color:#3A2818;line-height:2}
+.goal-text ul{margin:6px 0 6px 14px;list-style:'▸  '}
+.goal-text li{margin:4px 0}
+.k{display:inline-block;background:#5A3E28;color:#fff;padding:1px 4px;border-radius:2px;margin:0 1px;font-size:6px}
+.start-btn{background:#4CAF50;border:3px solid #2E7D32;color:#fff;font-family:'Press Start 2P',monospace;font-size:10px;padding:16px 32px;cursor:pointer;box-shadow:4px 4px 0 #1B5E20;transition:transform .1s;letter-spacing:.1em}
+.start-btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #1B5E20}
+.start-btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 #1B5E20}
+
+/* END */
+.end{text-align:center;padding:20px 10px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.end-icon{font-size:48px}
+.end-title{font-size:clamp(13px,3.6vw,20px)}
+.end-title.win{color:#FFD700;text-shadow:3px 3px 0 #E65100}
+.end-title.lose{color:#FF8A65;text-shadow:3px 3px 0 #BF360C}
+.end-msg{font-size:7px;color:#fff;text-shadow:2px 2px 0 #2E7D32;line-height:2;max-width:440px}
+.end-stats{background:rgba(255,253,231,.95);border:3px solid #5A3E28;padding:10px 14px;font-size:7px;color:#3A2818;line-height:2;max-width:300px}
+.restart-btn{background:#FF9800;border:3px solid #E65100;color:#fff;font-family:'Press Start 2P',monospace;font-size:8px;padding:12px 20px;cursor:pointer;box-shadow:4px 4px 0 #BF360C}
+.restart-btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #BF360C}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="hdr">
+    <div class="hdr-title">🏦 FINANCE CITY 🏦</div>
+    <div class="hdr-sub">LEARN · EARN · SAVE · ESCAPE DEBT</div>
+  </header>
+  <div id="app"></div>
+</div>
+
+<script>
+/* =====================================================
+   TILE-BASED ENGINE (adapted from Pokemon style)
+===================================================== */
+const TS = 16, MAP_W = 20, MAP_H = 13;
+const CW = TS * MAP_W, CH = TS * MAP_H;
+const px=(ctx,x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x|0,y|0,w|0,h|0)};
+
+/* =====================================================
+   TILES — a city look
+===================================================== */
+const TILES = {
+  // Sidewalk / pavement (walkable, neutral)
+  '.'(ctx,x,y,t,r){
+    px(ctx,x,y,TS,TS,'#BDBDBD');
+    px(ctx,x,y,TS,1,'#9E9E9E');
+    px(ctx,x,y+TS-1,TS,1,'#9E9E9E');
+    // seam lines (slab edges)
+    if(r%3===0)px(ctx,x+TS-1,y,1,TS,'#9E9E9E');
+    const seed=(r*31)%5;
+    if(seed===0)px(ctx,x+4,y+7,2,1,'#9E9E9E');
+    if(seed===2)px(ctx,x+11,y+3,1,1,'#757575');
+  },
+  // Road (walkable, dark with yellow line)
+  'D'(ctx,x,y,t,r){
+    px(ctx,x,y,TS,TS,'#424242');
+    // cracks
+    if(r%4===0)px(ctx,x+5,y+3,4,1,'#2E2E2E');
+    // center yellow dashed line (middle row only drawn from neighboring info — do per-column dashes)
+    const onMid=(r%20)>=0; // always: we draw only if this is part of center
+  },
+  // Road center dashed yellow line — special "middle road" tile
+  'Y'(ctx,x,y,t,r){
+    px(ctx,x,y,TS,TS,'#424242');
+    const dash=Math.floor((x/TS)%3);
+    if(dash!==2)px(ctx,x+2,y+TS/2-1,TS-4,2,'#FFEB3B');
+  },
+  // Building wall (solid)
+  'S'(ctx,x,y,t,r){
+    px(ctx,x,y,TS,TS,'#8D6E63');
+    px(ctx,x,y,TS,2,'#5D4037');
+    px(ctx,x,y+TS-1,TS,1,'#5D4037');
+    px(ctx,x,y,1,TS,'#6D4C41');
+    px(ctx,x+TS-1,y,1,TS,'#6D4C41');
+    // brick lines
+    px(ctx,x,y+6,TS,1,'rgba(62,39,35,.5)');
+    px(ctx,x,y+11,TS,1,'rgba(62,39,35,.5)');
+    // vertical bricks alternating
+    const off=(y/TS)%2?8:0;
+    px(ctx,x+off,y,1,6,'rgba(62,39,35,.5)');
+    px(ctx,x+off+8,y+6,1,5,'rgba(62,39,35,.5)');
+  },
+  // Building with window
+  'W'(ctx,x,y,t,r){
+    TILES['S'](ctx,x,y,t,r);
+    px(ctx,x+3,y+3,10,8,'#42A5F5');
+    px(ctx,x+3,y+3,10,1,'#1565C0');
+    px(ctx,x+3,y+3,1,8,'#1565C0');
+    px(ctx,x+3,y+10,10,1,'#1565C0');
+    px(ctx,x+12,y+3,1,8,'#1565C0');
+    // cross frame
+    px(ctx,x+7,y+3,1,8,'#1565C0');
+    px(ctx,x+3,y+6,10,1,'#1565C0');
+    // reflection
+    px(ctx,x+4,y+4,2,1,'rgba(255,255,255,.6)');
+  },
+  // Rooftop (solid, dark)
+  'R'(ctx,x,y,t,r){
+    px(ctx,x,y,TS,TS,'#5D4037');
+    px(ctx,x,y+TS-1,TS,1,'#3E2723');
+    // shingle pattern
+    const off=(y/TS+x/TS)%2?0:4;
+    for(let sx=off;sx<TS;sx+=8)px(ctx,x+sx,y+3,6,1,'#4E342E');
+    for(let sx=(off+4)%8;sx<TS;sx+=8)px(ctx,x+sx,y+9,6,1,'#4E342E');
+  },
+  // Grass
+  'g'(ctx,x,y,t,r){
+    px(ctx,x,y,TS,TS,'#66BB6A');
+    const seed=(r*37)%5;
+    if(seed===0){px(ctx,x+2,y+10,2,2,'#81C784');px(ctx,x+8,y+4,2,2,'#81C784')}
+    if(seed===1){px(ctx,x+11,y+9,2,2,'#4CAF50')}
+    if(seed===2)px(ctx,x+6,y+12,3,1,'#388E3C');
+    px(ctx,x,y,TS,1,'rgba(255,255,255,.08)');
+  },
+  // Tree
+  'T'(ctx,x,y,t,r){
+    TILES['g'](ctx,x,y,t,r);
+    px(ctx,x+6,y+10,4,6,'#5D4037');
+    px(ctx,x+2,y,12,10,'#2E7D32');
+    px(ctx,x+4,y-2,8,4,'#388E3C');
+    px(ctx,x+1,y+2,2,6,'#388E3C');
+    px(ctx,x+13,y+2,2,6,'#388E3C');
+    px(ctx,x+4,y+2,2,2,'#4CAF50');
+    px(ctx,x+10,y+4,2,2,'#4CAF50');
+  },
+  // Flower (decoration on grass)
+  'f'(ctx,x,y,t,r){
+    TILES['g'](ctx,x,y,t,r);
+    const col=['#E91E63','#FFEB3B','#9C27B0','#FF5722'][r%4];
+    px(ctx,x+7,y+8,2,4,'#2E7D32');
+    px(ctx,x+5,y+6,6,3,col);
+    px(ctx,x+7,y+7,2,1,'#FFF59D');
+  },
+  // Crosswalk
+  'X'(ctx,x,y){
+    px(ctx,x,y,TS,TS,'#424242');
+    for(let b=0;b<3;b++)px(ctx,x+b*6,y+2,4,12,'#FFFDE7');
+  },
+};
+
+/* =====================================================
+   OBJECTS — Finance buildings & NPCs
+===================================================== */
+const OBJECTS = {
+  // BANK — green building with $ sign
+  'K'(ctx,x,y,t,used,near){
+    TILES['.'](ctx,x,y,t,0);
+    // Facade
+    px(ctx,x,y-8,TS,8,'#2E7D32');
+    px(ctx,x,y-8,TS,2,'#1B5E20');
+    // Greek columns
+    px(ctx,x+1,y-8,2,8,'#E8F5E9');
+    px(ctx,x+TS-3,y-8,2,8,'#E8F5E9');
+    // $ sign
+    px(ctx,x+6,y-6,4,1,'#FFEB3B');
+    px(ctx,x+7,y-7,2,4,'#FFEB3B');
+    px(ctx,x+6,y-3,4,1,'#FFEB3B');
+    // Door
+    px(ctx,x+3,y+2,10,12,'#3E2723');
+    px(ctx,x+3,y+2,10,2,'#2E7D32');
+    px(ctx,x+10,y+8,2,2,'#FFD700');
+    // "BANK" sign under
+    px(ctx,x+2,y,12,2,'#FFEB3B');
+    if(near)drawStar(ctx,x+TS/2,y-12,t);
+  },
+  // STORE — red/orange shop
+  '$'(ctx,x,y,t,used,near){
+    TILES['.'](ctx,x,y,t,0);
+    px(ctx,x,y-8,TS,8,'#E64A19');
+    px(ctx,x,y-8,TS,2,'#BF360C');
+    // awning stripes
+    for(let s=0;s<4;s++){const sx=x+s*4;px(ctx,sx,y-8,2,8,'#FFCCBC')}
+    // window display
+    px(ctx,x+2,y,12,6,'#81D4FA');
+    px(ctx,x+3,y+1,2,2,'#FF9800');
+    px(ctx,x+7,y+1,2,2,'#4CAF50');
+    px(ctx,x+11,y+1,2,2,'#FFEB3B');
+    // door
+    px(ctx,x+5,y+6,6,8,'#3E2723');
+    px(ctx,x+9,y+10,1,2,'#FFD700');
+    if(near)drawStar(ctx,x+TS/2,y-12,t);
+  },
+  // LOAN OFFICE — blue formal building
+  'L'(ctx,x,y,t,used,near){
+    TILES['.'](ctx,x,y,t,0);
+    px(ctx,x,y-8,TS,8,'#1565C0');
+    px(ctx,x,y-8,TS,2,'#0D47A1');
+    // paper/document icon
+    px(ctx,x+5,y-6,6,5,'#FFFDE7');
+    px(ctx,x+6,y-5,4,1,'#5D4037');
+    px(ctx,x+6,y-3,4,1,'#5D4037');
+    // door
+    px(ctx,x+3,y,10,14,'#3E2723');
+    px(ctx,x+3,y,10,2,'#1565C0');
+    px(ctx,x+10,y+7,2,2,'#FFD700');
+    if(near)drawStar(ctx,x+TS/2,y-12,t);
+  },
+  // JOB OFFICE — dark gray with briefcase
+  'J'(ctx,x,y,t,used,near){
+    TILES['.'](ctx,x,y,t,0);
+    px(ctx,x,y-8,TS,8,'#455A64');
+    px(ctx,x,y-8,TS,2,'#263238');
+    // briefcase icon
+    px(ctx,x+5,y-6,6,5,'#5D4037');
+    px(ctx,x+5,y-6,6,1,'#8D6E63');
+    px(ctx,x+7,y-7,2,1,'#8D6E63');
+    px(ctx,x+7,y-4,2,1,'#FFD700');
+    // door
+    px(ctx,x+3,y,10,14,'#37474F');
+    px(ctx,x+4,y+2,8,8,'#90A4AE');
+    px(ctx,x+10,y+7,2,2,'#FFD700');
+    if(near)drawStar(ctx,x+TS/2,y-12,t);
+  },
+  // ATM — silver machine on sidewalk
+  'A'(ctx,x,y,t,used,near){
+    TILES['.'](ctx,x,y,t,0);
+    px(ctx,x+3,y+1,10,14,'#B0BEC5');
+    px(ctx,x+3,y+1,10,1,'#78909C');
+    px(ctx,x+3,y+14,10,1,'#546E7A');
+    // screen
+    px(ctx,x+4,y+3,8,5,'#1B5E20');
+    // scan line
+    const sl=Math.floor(t*4)%5;
+    px(ctx,x+4,y+3+sl,8,1,'rgba(100,255,100,.5)');
+    // keypad
+    for(let kr=0;kr<2;kr++)for(let kc=0;kc<3;kc++)px(ctx,x+4+kc*3,y+9+kr*2,2,1,'#37474F');
+    // slot
+    px(ctx,x+5,y+13,6,1,'#000');
+    if(near)drawStar(ctx,x+TS/2,y-6,t);
+  },
+  // HOUSE FOR SALE — blue house with red roof + FOR SALE sign
+  'H'(ctx,x,y,t,used,near){
+    TILES['g'](ctx,x,y,t,0);
+    // house body
+    px(ctx,x+2,y+4,12,12,'#FFE0B2');
+    px(ctx,x+2,y+4,12,1,'#8D6E63');
+    // roof triangle
+    for(let r=0;r<6;r++)px(ctx,x+2+r,y-2+r,12-r*2,1,'#C62828');
+    // door
+    px(ctx,x+6,y+9,4,7,'#5D4037');
+    px(ctx,x+8,y+12,1,1,'#FFD700');
+    // window
+    px(ctx,x+3,y+6,3,3,'#81D4FA');
+    px(ctx,x+10,y+6,3,3,'#81D4FA');
+    // FOR SALE sign
+    const swing=Math.sin(t*2)*1;
+    px(ctx,x+12+swing,y-8,1,6,'#5D4037');
+    px(ctx,x+9+swing,y-9,8,4,'#FFFDE7');
+    px(ctx,x+10+swing,y-8,1,1,'#C62828');
+    px(ctx,x+12+swing,y-8,1,1,'#C62828');
+    px(ctx,x+14+swing,y-8,1,1,'#C62828');
+    px(ctx,x+10+swing,y-7,5,1,'#2E7D32');
+    if(near)drawStar(ctx,x+TS/2,y-14,t);
+  },
+  // SIGNPOST
+  '!'(ctx,x,y,t,used,near){
+    TILES['.'](ctx,x,y,t,0);
+    px(ctx,x+7,y+8,2,8,'#5D4037');
+    px(ctx,x+3,y+2,10,8,'#8D6E63');
+    px(ctx,x+3,y+2,10,1,'#5D4037');
+    px(ctx,x+5,y+4,1,4,'#5D4037');
+    px(ctx,x+7,y+4,1,4,'#5D4037');
+    px(ctx,x+9,y+4,1,4,'#5D4037');
+    if(near)drawStar(ctx,x+TS/2,y-4,t);
+  },
+  // NPC — financial advisor (yellow shirt)
+  'N'(ctx,x,y,t,used,near){
+    TILES['.'](ctx,x,y,t,0);
+    const bob=Math.floor(t*2)%2;
+    // head
+    px(ctx,x+4,y+2+bob,8,6,'#FFE0B2');
+    px(ctx,x+4,y+2+bob,8,2,'#5D4037');
+    // glasses (financial advisor!)
+    px(ctx,x+5,y+5+bob,2,2,'#000');
+    px(ctx,x+9,y+5+bob,2,2,'#000');
+    px(ctx,x+7,y+6+bob,2,1,'#000');
+    // yellow shirt + tie
+    px(ctx,x+4,y+8+bob,8,5,'#FFEB3B');
+    px(ctx,x+7,y+8+bob,2,3,'#1976D2');
+    // legs
+    px(ctx,x+5,y+13+bob,3,3,'#3E2723');
+    px(ctx,x+8,y+13+bob,3,3,'#3E2723');
+    if(near)drawStar(ctx,x+TS/2,y-3,t);
+  },
+  // Library / info kiosk
+  'i'(ctx,x,y,t,used,near){
+    TILES['.'](ctx,x,y,t,0);
+    px(ctx,x+2,y+4,12,12,'#6D4C41');
+    px(ctx,x+2,y+4,12,2,'#3E2723');
+    // books on shelves
+    px(ctx,x+3,y+6,2,4,'#E53935');
+    px(ctx,x+5,y+6,2,4,'#2E7D32');
+    px(ctx,x+7,y+6,2,4,'#1976D2');
+    px(ctx,x+9,y+6,2,4,'#FF9800');
+    px(ctx,x+11,y+6,2,4,'#9C27B0');
+    // shelf lines
+    px(ctx,x+2,y+10,12,1,'#3E2723');
+    // lower row
+    px(ctx,x+3,y+11,2,4,'#E91E63');
+    px(ctx,x+5,y+11,2,4,'#FFEB3B');
+    px(ctx,x+7,y+11,2,4,'#00BCD4');
+    if(near)drawStar(ctx,x+TS/2,y-2,t);
+  },
+};
+
+function drawStar(ctx,x,y,t){
+  const pulse=.6+Math.sin(t*4)*.4;
+  ctx.fillStyle=`rgba(255,235,59,${pulse})`;
+  ctx.beginPath();
+  const sz=4;
+  for(let i=0;i<8;i++){const a=i*Math.PI/4-Math.PI/2,r=i%2?sz:sz*.4;ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r)}
+  ctx.closePath();ctx.fill();
+}
+
+const SOLID_TILES = new Set(['S','W','R','T']);
+const SOLID_OBJECTS = new Set(['K','$','L','J','A','H','N','i','!']);
+
+/* =====================================================
+   THE MAP — Finance City
+   Legend:
+   S=wall W=window R=roof T=tree .=sidewalk g=grass D=road Y=roadYellow X=crosswalk f=flower
+   K=bank $=store L=loan J=job A=atm H=house N=npc i=info !=sign
+===================================================== */
+const FINANCE_CITY = [
+  "RRRRRRRRRRRRRRRRRRRR",
+  "SWSSSWSSWSSSSWSSWSSS",
+  "SSSSSSSSSSSSSSSSSSSS",
+  "..K....$....L....J..",
+  "....................",
+  "DDDDDDDDDDDXDDDDDDDD",
+  "YYYYYYYYYYYXYYYYYYYY",
+  "DDDDDDDDDDDXDDDDDDDD",
+  "....................",
+  "gAggggfggggNggggggig",
+  "ggggggggggggggggggfg",
+  "ggggT!gggggHgggggggg",
+  "TTTTTTTTTTTTTTTTTTTT",
+];
+
+/* =====================================================
+   GAME STATE — finance stats
+===================================================== */
+let G = {
+  phase: 'intro',
+  cash: 100,
+  savings: 0,
+  debt: 0,
+  days: 1,
+  goal: 500,
+  story: '',
+  storyTitle: '',
+  loading: false,
+  menu: null,
+  interactedObjects: new Set(),
+  visitedJobToday: false,
+  visitedStoreToday: false,
+  messages: [],
+};
+
+/* Apply interest each time a "day" passes */
+function advanceDay() {
+  G.days++;
+  G.visitedJobToday = false;
+  // Savings interest: 2% (rounded up)
+  if (G.savings > 0) G.savings = Math.ceil(G.savings * 1.02);
+  // Debt interest: 10% — punishing so players learn
+  if (G.debt > 0) G.debt = Math.ceil(G.debt * 1.10);
+}
+
+/* =====================================================
+   OBJECT MENUS — each building's choices
+===================================================== */
+function getMenu(obj) {
+  const ch = obj.char;
+  if (ch === 'K') return {
+    title: '🏦 FIRST NATIONAL BANK',
+    npc: 'Teller',
+    greet: 'Welcome! Savings earn 2% interest each day. Protect your money!',
+    options: [
+      { label: `Deposit $25`, sub: 'Cash → Savings', action: 'deposit:25', disabled: G.cash < 25 },
+      { label: `Deposit $${G.cash} (all)`, sub: 'Move everything to savings', action: `deposit:${G.cash}`, disabled: G.cash === 0 },
+      { label: `Withdraw $25`, sub: 'Savings → Cash', action: 'withdraw:25', disabled: G.savings < 25 },
+      { label: 'Leave', sub: '', action: 'leave' },
+    ],
+  };
+  if (ch === '$') return {
+    title: '🏪 MEGA MART',
+    npc: 'Clerk',
+    greet: 'Welcome shopper! Cash is safer than credit. Credit costs you extra!',
+    options: [
+      { label: 'Buy groceries ($15)', sub: 'Pay cash — needed for food', action: 'groceries', disabled: G.cash < 15, cls: 'special' },
+      { label: 'Buy a fancy TV ($200)', sub: 'On credit + 10% fee', action: 'buy_tv', cls: 'warn' },
+      { label: 'Buy a watch ($500)', sub: 'Credit! 10% fee added', action: 'buy_watch', cls: 'danger' },
+      { label: 'Leave', sub: '', action: 'leave' },
+    ],
+  };
+  if (ch === 'L') return {
+    title: '📋 QUICK LOANS INC',
+    npc: 'Loan Officer',
+    greet: 'Need cash fast? Loans have 20% fees. Only borrow what you can repay!',
+    options: [
+      { label: 'Take $100 loan', sub: 'Gain $100 cash, owe $120', action: 'loan:100', cls: 'warn' },
+      { label: 'Take $300 loan', sub: 'Gain $300 cash, owe $360!', action: 'loan:300', cls: 'danger' },
+      { label: `Repay $50`, sub: 'Reduce your debt', action: 'repay:50', disabled: G.cash < 50 || G.debt === 0 },
+      { label: `Repay all ($${G.debt})`, sub: 'Pay off entirely', action: `repay:${G.debt}`, disabled: G.cash < G.debt || G.debt === 0 },
+    ],
+  };
+  if (ch === 'J') return {
+    title: '💼 CITY JOBS',
+    npc: 'Boss',
+    greet: G.visitedJobToday ? "You already worked today. Come back tomorrow!" : 'Work earns honest income. Save most of it!',
+    options: G.visitedJobToday ? [
+      { label: 'Leave', sub: 'Come back after a day', action: 'leave' },
+    ] : [
+      { label: 'Work a day (+$40)', sub: '1 day passes', action: 'work', cls: 'special' },
+      { label: 'Skip today', sub: '', action: 'leave' },
+    ],
+  };
+  if (ch === 'A') return {
+    title: '🏧 ATM',
+    npc: 'Screen',
+    greet: 'Check your balances anytime. Knowing your money is step one!',
+    options: [
+      { label: 'Print receipt', sub: 'See full breakdown', action: 'check' },
+      { label: 'Leave', sub: '', action: 'leave' },
+    ],
+  };
+  if (ch === 'H') return {
+    title: '🏠 HOUSE FOR SALE',
+    npc: 'Realtor',
+    greet: 'This lovely home is $500! You need no debt to qualify for a mortgage.',
+    options: [
+      { label: `Buy house ($500)`, sub: G.debt > 0 ? 'Must be debt-free first!' : 'Wins the game!', action: 'buy_house', disabled: (G.cash + G.savings) < 500 || G.debt > 0, cls: 'special' },
+      { label: 'Come back later', sub: '', action: 'leave' },
+    ],
+  };
+  if (ch === 'N') return {
+    title: '🎓 FINANCIAL ADVISOR',
+    npc: 'Advisor',
+    greet: '', // AI generated
+    options: [
+      { label: 'Ask for a tip', sub: 'Learn something new', action: 'tip' },
+      { label: 'Leave', sub: '', action: 'leave' },
+    ],
+    aiGreet: true,
+  };
+  if (ch === 'i') return {
+    title: '📚 LIBRARY',
+    npc: 'Librarian',
+    greet: '',
+    options: [
+      { label: 'Read about BANKING', sub: 'Savings & interest', action: 'lesson:banking' },
+      { label: 'Read about CREDIT', sub: 'Credit cards, APR', action: 'lesson:credit' },
+      { label: 'Read about LOANS', sub: 'Borrowing & repayment', action: 'lesson:loans' },
+      { label: 'Leave', sub: '', action: 'leave' },
+    ],
+    aiGreet: true,
+  };
+  if (ch === '!') return {
+    title: '📋 NOTICE BOARD',
+    npc: '',
+    greet: `Welcome to Finance City! Goal: save $500 to buy the house.\n• JOB (💼) earns $40/day\n• BANK (🏦) grows savings at 2%/day\n• DEBT grows at 10%/day — avoid it!\n• Buy groceries sometimes or you'll go hungry`,
+    options: [
+      { label: 'Got it!', sub: '', action: 'leave' },
+    ],
+  };
+  return null;
+}
+
+/* =====================================================
+   ACTION HANDLERS
+===================================================== */
+async function doAction(action) {
+  if (action === 'leave') { G.menu = null; render(); return; }
+  const [cmd, argStr] = action.split(':');
+  const arg = argStr ? parseInt(argStr, 10) : 0;
+
+  let resultMsg = '';
+  let aiContext = '';
+  let closeMenu = true;
+
+  switch (cmd) {
+    case 'deposit': {
+      G.cash -= arg;
+      G.savings += arg;
+      resultMsg = `Deposited $${arg}. Now $${G.savings} in savings!`;
+      aiContext = `Player deposited $${arg} into savings. Teach them about saving & interest.`;
+      break;
+    }
+    case 'withdraw': {
+      G.savings -= arg;
+      G.cash += arg;
+      resultMsg = `Withdrew $${arg}. Don't spend it on wants!`;
+      aiContext = `Player withdrew $${arg} from savings. Remind them why savings matter.`;
+      break;
+    }
+    case 'work': {
+      G.cash += 40;
+      advanceDay();
+      G.visitedJobToday = true;
+      resultMsg = `You earned $40! Day is now ${G.days}.`;
+      aiContext = `Player worked and earned $40. Advance day ${G.days}. Teach them to save earnings, not spend them all.`;
+      break;
+    }
+    case 'groceries': {
+      G.cash -= 15;
+      resultMsg = `Bought groceries. Good choice — you used cash!`;
+      aiContext = `Player bought groceries with cash ($15). Praise the decision and explain paying with cash avoids debt.`;
+      break;
+    }
+    case 'buy_tv': {
+      G.debt += 220; // 10% credit fee
+      resultMsg = `You got the TV, but now owe $220! (Price + 10% credit fee)`;
+      aiContext = `Player bought a $200 TV on credit, now owes $220 (10% fee). Warn about credit card debt and interest accumulating daily.`;
+      break;
+    }
+    case 'buy_watch': {
+      G.debt += 550;
+      resultMsg = `You got the watch... now $550 in debt! Ouch!`;
+      aiContext = `Player bought a $500 watch on credit, now owes $550. Strongly warn about impulse purchases on credit and snowballing debt.`;
+      break;
+    }
+    case 'loan': {
+      G.cash += arg;
+      G.debt += Math.round(arg * 1.2);
+      resultMsg = `Got $${arg} cash. You now owe $${Math.round(arg*1.2)}!`;
+      aiContext = `Player took a $${arg} loan. They owe $${Math.round(arg*1.2)} (20% fee). Teach about loan interest and how it grows.`;
+      break;
+    }
+    case 'repay': {
+      const pay = Math.min(arg, G.cash, G.debt);
+      G.cash -= pay;
+      G.debt -= pay;
+      resultMsg = `Repaid $${pay}. Debt is now $${G.debt}.`;
+      aiContext = `Player repaid $${pay} of debt. Remaining debt: $${G.debt}. Celebrate the smart decision — debt repayment saves money long-term.`;
+      break;
+    }
+    case 'check': {
+      resultMsg = `💰 Cash: $${G.cash}\n🏦 Savings: $${G.savings}\n💳 Debt: $${G.debt}\n📅 Day: ${G.days}`;
+      aiContext = `Player checked balances. Encourage tracking finances regularly.`;
+      break;
+    }
+    case 'buy_house': {
+      // Use savings first, then cash
+      let need = 500;
+      const useSavings = Math.min(G.savings, need);
+      G.savings -= useSavings;
+      need -= useSavings;
+      G.cash -= need;
+      G.phase = 'win';
+      G.story = `🎉 You bought your first home for $500! You saved wisely, avoided debt, and achieved the American Dream. Final day: ${G.days}.`;
+      render();
+      return;
+    }
+    case 'tip':
+    case 'lesson': {
+      aiContext = cmd === 'tip' ? 'Give the player a single useful personal finance tip about banking, credit, or loans. Maximum 2 sentences.' : `Teach a short lesson about ${argStr}. Explain the key concept in 2-3 sentences, simply.`;
+      resultMsg = ''; // AI fills
+      closeMenu = false; // keep menu open so they can ask again
+      break;
+    }
+    default:
+      resultMsg = 'Nothing happened.';
+  }
+
+  // Show immediate result
+  G.story = resultMsg;
+  G.loading = true;
+  if (closeMenu) G.menu = null;
+  render();
+
+  // Get AI commentary
+  if (aiContext) await callAI(aiContext);
+  else G.loading = false;
+  checkGameOver();
+  render();
+}
+
+function checkGameOver() {
+  if (G.debt > 1000 && G.cash + G.savings < 50) {
+    G.phase = 'dead';
+    G.story = `💔 You drowned in debt ($${G.debt}) and have nothing left. Debt grows faster than savings — always pay it off first!`;
+  }
+}
+
+/* =====================================================
+   PLAYER SPRITE (same as before)
+===================================================== */
+function drawPlayer(ctx, px_, py_, facing, walkFrame) {
+  const x = px_, y = py_;
+  const step = Math.floor(walkFrame) % 2;
+  const ox = x + 1, oy = y - 2;
+  if (facing === 0) {
+    px(ctx,ox+3,oy+4,8,6,'#FFCC80');
+    px(ctx,ox+3,oy+4,8,2,'#3E2723');
+    px(ctx,ox+3,oy+5,1,1,'#3E2723');px(ctx,ox+10,oy+5,1,1,'#3E2723');
+    px(ctx,ox+5,oy+7,1,1,'#000');px(ctx,ox+8,oy+7,1,1,'#000');
+    px(ctx,ox+3,oy+10,8,4,'#1976D2');
+    px(ctx,ox+2,oy+10,1,4,'#FFCC80');px(ctx,ox+11,oy+10,1,4,'#FFCC80');
+    if(step===0){px(ctx,ox+4,oy+14,3,4,'#4E342E');px(ctx,ox+7,oy+14,3,4,'#3E2723')}
+    else{px(ctx,ox+4,oy+14,3,4,'#3E2723');px(ctx,ox+7,oy+14,3,4,'#4E342E')}
+  } else if (facing === 1) {
+    px(ctx,ox+3,oy+4,8,6,'#FFCC80');
+    px(ctx,ox+3,oy+4,8,5,'#3E2723');
+    px(ctx,ox+3,oy+9,8,1,'#FFCC80');
+    px(ctx,ox+3,oy+10,8,4,'#1565C0');
+    px(ctx,ox+2,oy+10,1,4,'#FFCC80');px(ctx,ox+11,oy+10,1,4,'#FFCC80');
+    if(step===0){px(ctx,ox+4,oy+14,3,4,'#4E342E');px(ctx,ox+7,oy+14,3,4,'#3E2723')}
+    else{px(ctx,ox+4,oy+14,3,4,'#3E2723');px(ctx,ox+7,oy+14,3,4,'#4E342E')}
+  } else {
+    ctx.save();
+    if(facing===2){ctx.translate(ox*2+14,0);ctx.scale(-1,1)}
+    px(ctx,ox+4,oy+4,7,6,'#FFCC80');
+    px(ctx,ox+4,oy+4,7,2,'#3E2723');
+    px(ctx,ox+4,oy+5,1,2,'#3E2723');
+    px(ctx,ox+8,oy+7,1,1,'#000');
+    px(ctx,ox+4,oy+10,6,4,'#1976D2');
+    const swing=step===0?1:-1;
+    px(ctx,ox+9,oy+10+swing,2,4,'#FFCC80');
+    if(step===0){px(ctx,ox+4,oy+14,3,4,'#4E342E');px(ctx,ox+7,oy+14,3,3,'#3E2723')}
+    else{px(ctx,ox+4,oy+14,3,3,'#3E2723');px(ctx,ox+7,oy+14,3,4,'#4E342E')}
+    ctx.restore();
+  }
+  ctx.fillStyle='rgba(0,0,0,0.25)';
+  ctx.beginPath();ctx.ellipse(x+8,y+17,5,1.5,0,0,Math.PI*2);ctx.fill();
+}
+
+/* =====================================================
+   ENGINE
+===================================================== */
+const engine = {
+  tiles: null, objects: {},
+  player: {tx:0,ty:0,px:0,py:0,facing:0,walk:0,moving:false,targetTx:0,targetTy:0},
+  keys: {}, raf: null, lastT: 0,
+  load() {
+    this.tiles = [];
+    this.objects = {};
+    for (let y=0;y<MAP_H;y++) {
+      const row = [];
+      const src = FINANCE_CITY[y] || '';
+      for (let x=0;x<MAP_W;x++) {
+        const ch = src[x] || '.';
+        if (OBJECTS[ch]) {
+          row.push('.');
+          this.objects[`${x},${y}`] = { char: ch, x, y };
+        } else {
+          row.push(ch);
+        }
+      }
+      this.tiles.push(row);
+    }
+    // Player start: near bottom-left grass area
+    let sx=2, sy=8;
+    this.player = { tx:sx, ty:sy, px:sx*TS, py:sy*TS, facing:0, walk:0, moving:false, targetTx:sx, targetTy:sy };
+  },
+  isSolid(tx,ty) {
+    if (tx<0||tx>=MAP_W||ty<0||ty>=MAP_H) return true;
+    if (SOLID_TILES.has(this.tiles[ty]?.[tx])) return true;
+    const obj = this.objects[`${tx},${ty}`];
+    if (obj && SOLID_OBJECTS.has(obj.char)) return true;
+    return false;
+  },
+  tryMove(dx,dy) {
+    if (this.player.moving) return;
+    if (G.menu) return; // disabled during menus
+    if (G.loading) return;
+    if (dx>0) this.player.facing=3;
+    else if (dx<0) this.player.facing=2;
+    else if (dy>0) this.player.facing=0;
+    else if (dy<0) this.player.facing=1;
+    const nx=this.player.tx+dx, ny=this.player.ty+dy;
+    if (this.isSolid(nx,ny)) return;
+    this.player.targetTx=nx;
+    this.player.targetTy=ny;
+    this.player.moving=true;
+  },
+  interact() {
+    if (G.menu || G.loading) return;
+    if (this.player.moving) return;
+    const f=this.player.facing;
+    const dx=f===3?1:f===2?-1:0;
+    const dy=f===0?1:f===1?-1:0;
+    const obj=this.objects[`${this.player.tx+dx},${this.player.ty+dy}`];
+    if (!obj) return;
+    openMenu(obj);
+  },
+  initInput() {
+    this.keys={};
+    this._kd=e=>{
+      const k=e.key.toLowerCase();
+      this.keys[k]=true;
+      if (['arrowup','arrowdown','arrowleft','arrowright',' ','w','a','s','d','e'].includes(k)) e.preventDefault();
+      if (k==='e'||k===' '||k==='enter') this.interact();
+    };
+    this._ku=e=>{this.keys[e.key.toLowerCase()]=false};
+    window.addEventListener('keydown',this._kd);
+    window.addEventListener('keyup',this._ku);
+  },
+  stopInput() {
+    if(this._kd)window.removeEventListener('keydown',this._kd);
+    if(this._ku)window.removeEventListener('keyup',this._ku);
+  },
+  update(dt) {
+    const p=this.player;
+    if (p.moving) {
+      const tgtPx=p.targetTx*TS, tgtPy=p.targetTy*TS;
+      const speed=TS*5*dt;
+      const dx=tgtPx-p.px, dy=tgtPy-p.py;
+      const dist=Math.hypot(dx,dy);
+      if (dist<speed) { p.px=tgtPx;p.py=tgtPy;p.tx=p.targetTx;p.ty=p.targetTy;p.moving=false;p.walk=0 }
+      else { p.px+=(dx/dist)*speed;p.py+=(dy/dist)*speed;p.walk+=dt*8 }
+    } else if (!G.menu && !G.loading) {
+      const up=this.keys['w']||this.keys['arrowup'];
+      const down=this.keys['s']||this.keys['arrowdown'];
+      const left=this.keys['a']||this.keys['arrowleft'];
+      const right=this.keys['d']||this.keys['arrowright'];
+      if (up) this.tryMove(0,-1);
+      else if (down) this.tryMove(0,1);
+      else if (left) this.tryMove(-1,0);
+      else if (right) this.tryMove(1,0);
+    }
+  },
+  render(ctx,t) {
+    ctx.fillStyle='#87CEEB';ctx.fillRect(0,0,CW,CH);
+    for (let y=0;y<MAP_H;y++) for (let x=0;x<MAP_W;x++) {
+      const tile=this.tiles[y][x];
+      const fn=TILES[tile]||TILES['.'];
+      fn(ctx,x*TS,y*TS,t,x*7+y*11);
+    }
+    const f=this.player.facing;
+    const pdx=f===3?1:f===2?-1:0;
+    const pdy=f===0?1:f===1?-1:0;
+    const facingTx=this.player.tx+pdx, facingTy=this.player.ty+pdy;
+    Object.values(this.objects).forEach(obj=>{
+      const fn=OBJECTS[obj.char];if(!fn)return;
+      const used=G.interactedObjects.has(`${obj.x},${obj.y}`);
+      const near=(obj.x===facingTx&&obj.y===facingTy)&&!this.player.moving;
+      fn(ctx,obj.x*TS,obj.y*TS,t,used,near);
+    });
+    drawPlayer(ctx,this.player.px,this.player.py,this.player.facing,this.player.walk);
+  },
+  start() {
+    this.stop();this.initInput();this.lastT=performance.now();
+    const tick=()=>{
+      const cv=document.getElementById('gc');
+      if(!cv){this.raf=null;return}
+      const ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;
+      const now=performance.now(),dt=Math.min(.05,(now-this.lastT)/1000);
+      this.lastT=now;this.update(dt);this.render(ctx,now/1000);
+      this.raf=requestAnimationFrame(tick);
+    };
+    tick();
+  },
+  stop() { if(this.raf){cancelAnimationFrame(this.raf);this.raf=null} this.stopInput(); }
+};
+
+/* =====================================================
+   MENU SYSTEM
+===================================================== */
+async function openMenu(obj) {
+  const menu = getMenu(obj);
+  if (!menu) return;
+  G.menu = menu;
+  G.menuObj = obj;
+  G.story = menu.greet || '';
+  G.storyTitle = menu.title;
+  render();
+  // Generate AI intro if requested
+  if (menu.aiGreet) {
+    G.loading = true; render();
+    const ctx = obj.char==='N'
+      ? 'Financial Advisor NPC greets the player with an introduction and asks if they want a tip. Max 2 sentences.'
+      : 'Librarian NPC greets the player and invites them to read about finance topics. Max 2 sentences.';
+    await callAI(ctx);
+    render();
+  }
+}
+
+/* =====================================================
+   AI CALL — finance teacher
+===================================================== */
+const SYSTEM_PROMPT = `You are a friendly, upbeat financial teacher in a Pokemon-style educational game. You teach 13-year-old beginners about BANKING, CREDIT CARDS, and LOANS.
+
+Your replies must be:
+- SHORT: maximum 2 sentences or ~25 words
+- CHEERFUL and encouraging, never condescending
+- CLEAR: explain one concept at a time using simple words
+- ACCURATE: use real finance principles (compound interest, APR, principal, etc.)
+- Use emojis sparingly for warmth
+
+Give exactly the kind of response a fun teacher would say to a kid who just did something in a money-learning game. Never use JSON, never use markdown. Just plain cheerful text.`;
+
+async function callAI(userMsg) {
+  G.loading = true;
+  const stateStr = `[Player state: cash=$${G.cash}, savings=$${G.savings}, debt=$${G.debt}, day=${G.days}]`;
+  G.messages.push({ role: 'user', content: `${stateStr}\n${userMsg}` });
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 120,
+        system: SYSTEM_PROMPT,
+        messages: G.messages.slice(-6), // short memory
+      }),
+    });
+    const data = await res.json();
+    const text = (data.content?.[0]?.text || '').trim();
+    G.messages.push({ role: 'assistant', content: text });
+    // Append AI text to existing story (or replace if story was empty)
+    if (text) {
+      G.story = G.story ? `${G.story}\n\n💬 ${text}` : text;
+    }
+  } catch (err) {
+    // silent — game keeps working without commentary
+  }
+  G.loading = false;
+}
+
+/* =====================================================
+   RENDER (UI)
+===================================================== */
+function render() {
+  const app = document.getElementById('app');
+  if (G.phase === 'intro') { engine.stop(); app.innerHTML = rIntro(); return; }
+  if (G.phase === 'win' || G.phase === 'dead') { engine.stop(); app.innerHTML = rEnd(G.phase==='win'); return; }
+  app.innerHTML = rGame();
+  setTimeout(()=>{
+    const cv = document.getElementById('gc');
+    if (cv) { cv.width = CW; cv.height = CH; engine.start(); }
+    bindAll();
+  },10);
+}
+
+function rIntro() {
+  return `<div class="intro">
+    <p class="intro-desc">LEARN BANKING · CREDIT · LOANS</p>
+    <div class="goal-card">
+      <div class="goal-title">🎯 YOUR QUEST</div>
+      <div class="goal-text">
+        Welcome to Finance City! Your mission:
+        <ul>
+          <li>Save <strong>$500</strong> to buy your first home</li>
+          <li>Work at the 💼 <strong>JOB</strong> to earn cash</li>
+          <li>Deposit at the 🏦 <strong>BANK</strong> to grow savings</li>
+          <li>Avoid 💳 <strong>DEBT</strong> — it grows fast!</li>
+          <li>Talk to 🎓 <strong>NPCs</strong> for free tips</li>
+        </ul>
+        <div style="margin-top:10px;text-align:center">
+          <span class="k">W</span><span class="k">A</span><span class="k">S</span><span class="k">D</span> move &nbsp; <span class="k">E</span> interact
+        </div>
+      </div>
+    </div>
+    <button class="start-btn" id="start-btn">▶ START GAME</button>
+  </div>`;
+}
+
+function rGame() {
+  const goalPct = Math.min(100, Math.round((G.cash+G.savings)/G.goal*100));
+  const debtWarn = G.debt > 200 ? 'debt-warn' : '';
+  const menuHtml = G.menu ? renderMenu() : '';
+  const story = G.story || 'Walk up to a building and press E to interact!';
+  return `
+    <div class="stats-bar">
+      <div class="stat cash"><div class="stat-label">💰 CASH</div><div class="stat-val">$${G.cash}</div></div>
+      <div class="stat savings"><div class="stat-label">🏦 SAVINGS</div><div class="stat-val">$${G.savings}</div></div>
+      <div class="stat debt ${debtWarn}"><div class="stat-label">💳 DEBT</div><div class="stat-val">$${G.debt}</div></div>
+      <div class="stat day"><div class="stat-label">📅 DAY</div><div class="stat-val">${G.days}</div></div>
+    </div>
+    <div class="goal-bar">
+      <span class="goal-label">🏠 HOUSE:</span>
+      <div class="goal-track"><div class="goal-fill" style="width:${goalPct}%"></div></div>
+      <span class="goal-pct">${goalPct}%</span>
+    </div>
+    <div class="world-wrap" id="wwrap">
+      <canvas id="gc"></canvas>
+      <div class="world-label">FINANCE CITY</div>
+      <div class="coord-badge">📍 (${engine.player?.tx||0},${engine.player?.ty||0})</div>
+    </div>
+    <div class="textbox ${G.loading?'loading':''}">
+      ${G.storyTitle?`<div class="tb-title">${G.storyTitle}</div>`:''}
+      <div class="tb-text">${escape(story)}</div>
+    </div>
+    ${menuHtml}
+    <div class="bottom">
+      <div class="hint-box">
+        ${G.menu?'▼ Pick an option above':'Use d-pad or <span class="k">WASD</span> to move, <span class="k">E</span> to interact with stars ⭐'}
+      </div>
+      <div class="dpad-wrap">
+        <div class="dpad">
+          <div class="dbtn empty"></div><button class="dbtn" data-dir="up">▲</button><div class="dbtn empty"></div>
+          <button class="dbtn" data-dir="left">◀</button><div class="dbtn empty"></div><button class="dbtn" data-dir="right">▶</button>
+          <div class="dbtn empty"></div><button class="dbtn" data-dir="down">▼</button><div class="dbtn empty"></div>
+        </div>
+        <button class="abtn" data-dir="interact">E</button>
+      </div>
+    </div>`;
+}
+
+function renderMenu() {
+  const m = G.menu;
+  const opts = m.options.map((o,i)=>`
+    <button class="menu-btn ${o.cls||''}" data-action="${o.action}" ${o.disabled||G.loading?'disabled':''}>
+      <span class="menu-btn-label">${o.sub||''}</span>
+      ▸ ${o.label}
+    </button>`).join('');
+  return `<div class="menu-choices">${opts}</div>`;
+}
+
+function escape(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
+
+function rEnd(win) {
+  const stats = `
+    <div class="end-stats">
+      💰 Cash: $${G.cash}<br>
+      🏦 Savings: $${G.savings}<br>
+      💳 Debt: $${G.debt}<br>
+      📅 Days played: ${G.days}
+    </div>`;
+  return `<div class="end">
+    <div class="end-icon">${win?'🏠':'💔'}</div>
+    <div class="end-title ${win?'win':'lose'}">${win?'HOME OWNER!':'TOO MUCH DEBT!'}</div>
+    <p class="end-msg">${G.story}</p>
+    ${stats}
+    <button class="restart-btn" id="restart-btn">▶ PLAY AGAIN</button>
+  </div>`;
+}
+
+function bindAll() {
+  document.querySelectorAll('[data-dir]').forEach(btn=>{
+    const dir = btn.dataset.dir;
+    const fn = () => {
+      if (dir==='up') engine.tryMove(0,-1);
+      else if (dir==='down') engine.tryMove(0,1);
+      else if (dir==='left') engine.tryMove(-1,0);
+      else if (dir==='right') engine.tryMove(1,0);
+      else if (dir==='interact') engine.interact();
+    };
+    btn.addEventListener('click', fn);
+    btn.addEventListener('touchstart', e=>{e.preventDefault();fn()}, {passive:false});
+  });
+  document.querySelectorAll('[data-action]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ if (!btn.disabled) doAction(btn.dataset.action); });
+  });
+}
+
+document.getElementById('app').addEventListener('click', e=>{
+  if (e.target.id==='start-btn') { startGame(); }
+  else if (e.target.id==='restart-btn') { resetGame(); }
+});
+
+function startGame() {
+  G = { phase:'playing', cash:100, savings:0, debt:0, days:1, goal:500,
+        story:'Walk around and explore! Start by finding the 💼 JOB to earn money.',
+        storyTitle:'', loading:false, menu:null, interactedObjects:new Set(),
+        visitedJobToday:false, messages:[] };
+  engine.load();
+  render();
+}
+
+function resetGame() {
+  engine.stop();
+  G.phase = 'intro';
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
